@@ -84,6 +84,7 @@ class RTCRenderVideoSource
   Napi::Value ExecOperation(const Napi::CallbackInfo&);
 
   rtc::scoped_refptr<RTCRenderVideoTrackSource> _source;
+  VideoRenderModule *_videoRender;
 };
 
 }  // namespace node_webrtc

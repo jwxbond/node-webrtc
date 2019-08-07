@@ -24,6 +24,7 @@
 
 
 #include "src/interfaces/rtc_render/render_frame_data.h"
+#include "src/interfaces/rtc_render/video_render_opengl.h"
 
 
 namespace node_webrtc {
@@ -54,6 +55,10 @@ Napi::Value RTCRenderVideoSource::New(const Napi::CallbackInfo& info) {
   .FromMaybe(absl::optional<bool>());
 
   _source = new rtc::RefCountedObject<RTCRenderVideoTrackSource>(init.isScreencast, needsDenoising);
+
+  _videoRender = new VideoRenderOpenGL("OpenGLRenderidentifier");
+
+  _videoRender->StartRender();
 
   return info.Env().Undefined();
 }
