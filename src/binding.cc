@@ -18,6 +18,7 @@
 #include "src/interfaces/rtc_ice_transport.h"
 #include "src/interfaces/rtc_peer_connection.h"
 #include "src/interfaces/rtc_peer_connection/peer_connection_factory.h"
+#include "src/interfaces/rtc_render/rtc_render_video_source.h"
 #include "src/interfaces/rtc_rtp_receiver.h"
 #include "src/interfaces/rtc_rtp_sender.h"
 #include "src/interfaces/rtc_rtp_transceiver.h"
@@ -60,6 +61,8 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
   node_webrtc::RTCStatsResponse::Init(env, exports);
   node_webrtc::RTCVideoSink::Init(env, exports);
   node_webrtc::RTCVideoSource::Init(env, exports);
+  node_webrtc::RTCRenderVideoSource::Init(env, exports);
+
 #ifdef DEBUG
   node_webrtc::Test::Init(env, exports);
 #endif
