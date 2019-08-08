@@ -1,16 +1,3 @@
-#ifdef __APPLE__
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
-#include <GLUT/glut.h>
-#else
-#ifdef _WIN32
-  #include <windows.h>
-#endif
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include <GL/glut.h>
-#endif
-
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -73,9 +60,16 @@ int32_t VideoRenderOpenGL::StopRender()
 
 webrtc::VideoFrame VideoRenderOpenGL::GetCurrentFrameBuffer()
 {
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, mTextureID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+
     size_t pixelLength = static_cast<size_t>(mWidth * mHeight * 4);
-    uint8_t *pixels = (uint8_t *)malloc(pixelLength);
-    glReadPixels(0, 0, mWidth, mHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    GLubyte *pixels = new GLubyte[pixelLength];
+    // glReadPixels(0, 0, mWidth, mHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
 
     GLenum error = glGetError();
     if ( error != 0 )
@@ -83,35 +77,44 @@ webrtc::VideoFrame VideoRenderOpenGL::GetCurrentFrameBuffer()
         printf("[VideoRenderOpenGL] GetCurrentFrameBuffer glReadPixels error=%d\n", error);
     }
     
+    glBindTexture(GL_TEXTURE_2D, 0);
+
     rtc::scoped_refptr<webrtc::I420Buffer> buffer = CreateI420Buffer(mWidth, mHeight, pixels, pixelLength);
     webrtc::VideoFrame::Builder builder;
     auto frame = builder.set_video_frame_buffer(buffer).build();
+
+    if( pixels ) delete pixels;
+    
     return frame;
 }
-
 
 
 //for test
 void VideoRenderOpenGL::InitOpenGLEnvironment()
 {
+    printf("[VideoRenderOpenGL] InitOpenGLEnvironment Start..\n");
+
     if( !mOpenGLInited )
     {
         mOpenGLInited = true;
     }
 
+    printf("[VideoRenderOpenGL] Init GL context ..\n");
+
+    //Only for Mac OSX
+    int argc = 0;
+    glutInit(&argc, NULL);
+    glutInitDisplayMode(GLUT_3_2_CORE_PROFILE | GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH );
+    glutInitWindowSize( 500, 500 );
+    glutCreateWindow( "Rotating Color Square" );
+
     glViewport(0, 0, mWidth, mHeight);
+    printf("[VideoRenderOpenGL] glViewport(0,0,%d, %d)\n", mWidth, mHeight);
 
-    //1. create frame buffer 
-	GLuint frameBuffer;
-	glGenFramebuffers(1, &frameBuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-	printf("[VideoRenderOpenGL] glBindFramebuffer()\n");
-    
-
-    //2. create texture as color attachment0
-    GLuint texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    //texture
+    glGenTextures(1, &mTextureID);
+    printf("[VideoRenderOpenGL] glGenTextures=%d\n", mTextureID);
+    glBindTexture(GL_TEXTURE_2D, mTextureID);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	printf("[VideoRenderOpenGL] glTexImage2D()\n");
 
@@ -120,8 +123,19 @@ void VideoRenderOpenGL::InitOpenGLEnvironment()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
-    //3. Attach the texture to the framebuffer.
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+    //depthBuffer
+    glGenRenderbuffers(1, &mDepthBuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, mDepthBuffer);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, mWidth, mHeight);
+    printf("[VideoRenderOpenGL] depthBuffer, glGenRenderbuffers()=%d\n", mDepthBuffer);
+
+
+    //frame buffer 
+	glGenFramebuffers(1, &mFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, mFBO);
+	printf("[VideoRenderOpenGL] glGenFramebuffers()=%d\n", mFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, mTextureID, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, mDepthBuffer);
     
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if( status != GL_FRAMEBUFFER_COMPLETE )
@@ -129,9 +143,9 @@ void VideoRenderOpenGL::InitOpenGLEnvironment()
 	    printf("[VideoRenderOpenGL] Error glCheckFramebufferStatus()=%d\n", status);
         return;
     }
+    
+    printf("[VideoRenderOpenGL] InitOpenGLEnvironment Finished..\n");
 
-    glClearColor(0.0, 0, 0, 0.4);
-    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 }
 
 void VideoRenderOpenGL::ExecRenderTask(int taskId)
@@ -147,6 +161,10 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
     //2. do task with taskId
     glClearColor(0.0, 0, 0, 0.4);
     glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+
+    glBindFramebuffer(GL_FRAMEBUFFER, mFBO);
+    glBindTexture(GL_TEXTURE_2D, mTextureID);
 
     switch (taskId)
     {
