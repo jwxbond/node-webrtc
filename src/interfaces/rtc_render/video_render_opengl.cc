@@ -13,9 +13,10 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <Math.h> 
 #include "src/interfaces/rtc_render/video_render_opengl.h"
-
+#include "src/interfaces/rtc_render/render_frame_data.h"
 
 #define PI 3.14159265f
 
@@ -26,6 +27,16 @@ namespace node_webrtc {
 VideoRenderOpenGL::VideoRenderOpenGL(const char* renderId):
     mRenderId(renderId), 
     mOpenGLInited(false)
+{
+    mWidth = 500;
+    mHeight = 500;
+}
+
+VideoRenderOpenGL::VideoRenderOpenGL(const char* renderId, int width, int height):
+    mRenderId(renderId), 
+    mOpenGLInited(false),
+    mWidth(width),
+    mHeight(height)
 {
 
 }
@@ -46,7 +57,7 @@ int32_t VideoRenderOpenGL::StartRender()
 {
     printf("[VideoRenderOpenGL] StartRender..\n");
     //TODO启动线程OpenGL渲染
-    InitOpenGLEnvironment(500, 500);
+    InitOpenGLEnvironment();
     ExecRenderTask(0);
     return -1;
 }
@@ -60,25 +71,33 @@ int32_t VideoRenderOpenGL::StopRender()
 }
 
 
-webrtc::VideoFrameBuffer* VideoRenderOpenGL::GetCurrentFrameBuffer()
+webrtc::VideoFrame VideoRenderOpenGL::GetCurrentFrameBuffer()
 {
+    size_t pixelLength = static_cast<size_t>(mWidth * mHeight * 4);
+    uint8_t *pixels = (uint8_t *)malloc(pixelLength);
+    glReadPixels(0, 0, mWidth, mHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
-    return nullptr;
+    GLenum error = glGetError();
+    if ( error != 0 )
+    {
+        printf("[VideoRenderOpenGL] GetCurrentFrameBuffer glReadPixels error=%d\n", error);
+    }
+    
+    rtc::scoped_refptr<webrtc::I420Buffer> buffer = CreateI420Buffer(mWidth, mHeight, pixels, pixelLength);
+    webrtc::VideoFrame::Builder builder;
+    auto frame = builder.set_video_frame_buffer(buffer).build();
+    return frame;
 }
 
 
 
 //for test
-void VideoRenderOpenGL::InitOpenGLEnvironment(int width, int height)
+void VideoRenderOpenGL::InitOpenGLEnvironment()
 {
     if( !mOpenGLInited )
     {
         mOpenGLInited = true;
     }
-
-    mWidth = width;
-    mHeight = height;
-
 
     glViewport(0, 0, mWidth, mHeight);
 
@@ -93,7 +112,7 @@ void VideoRenderOpenGL::InitOpenGLEnvironment(int width, int height)
     GLuint texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	printf("[VideoRenderOpenGL] glTexImage2D()\n");
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

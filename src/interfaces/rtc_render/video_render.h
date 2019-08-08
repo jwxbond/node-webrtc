@@ -8,7 +8,7 @@
 #include <webrtc/rtc_base/ref_counted_object.h>
 
 
-namespace webrtc { class VideoFrameBuffer; }
+namespace webrtc { class VideoFrame; }
 
 namespace node_webrtc {
 
@@ -18,7 +18,7 @@ public:
 	virtual const char* CurrentRenderId() = 0;
 	virtual int32_t StartRender() = 0;
 	virtual int32_t StopRender() = 0;
-	virtual webrtc::VideoFrameBuffer* GetCurrentFrameBuffer() = 0;
+	virtual webrtc::VideoFrame GetCurrentFrameBuffer() = 0;
 
 protected:
 	virtual ~VideoRenderModule();

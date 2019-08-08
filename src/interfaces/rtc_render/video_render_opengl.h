@@ -11,12 +11,13 @@ class VideoRenderOpenGL : public VideoRenderModule
 {
 public:
 	VideoRenderOpenGL(const char* renderId);
+	VideoRenderOpenGL(const char* renderId, int width, int height);
 	~VideoRenderOpenGL();
 
 	const char* CurrentRenderId();
 	int32_t StartRender();
 	int32_t StopRender();
-	webrtc::VideoFrameBuffer* GetCurrentFrameBuffer();
+	webrtc::VideoFrame GetCurrentFrameBuffer();
 
 	//for test
 	void ExecRenderTask(int taskId = 0);
@@ -25,7 +26,7 @@ protected:
 	const char* mRenderId;
 
 	//for test
-	void InitOpenGLEnvironment(int w, int h);
+	void InitOpenGLEnvironment();
 	bool mOpenGLInited;
 	int mWidth;
 	int mHeight;

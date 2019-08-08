@@ -1,45 +1,57 @@
-#include <stdint.h>
 #include <stdio.h>
+#include <stdint.h>
+
+namespace rtc { template <typename T> class scoped_refptr; }
+namespace webrtc { class I420Buffer; }
+namespace webrtc { class I420BufferInterface; }
+namespace webrtc { class VideoFrame; }
+
 
 namespace node_webrtc {
 
-
     class RenderFrameI420;
-    class RenderFrameRGBA;
+    class RenderFrameRgba;
 
+    //frameData
     class RenderFrameData{
     public:
         int width;
         int height;
         uint8_t *bytes;
+        size_t byteLength;
 
-        static RenderFrameData Create(int width, int height, uint8_t *bytes = nullptr)
+        static RenderFrameData Create(int width, int height, uint8_t *bytes, size_t length)
         {
-            RenderFrameData *imageData = new RenderFrameData();
-            imageData->width = width;
-            imageData->height = height;
-            imageData->bytes = bytes;
-            return *imageData;
+            RenderFrameData data;
+            data.width = width;
+            data.height = height;
+            data.bytes = bytes;
+            data.byteLength = length;
+            return data;
+            // return {width, height, bytes, length};
         }
 
-        RenderFrameI420* toI420();
-        RenderFrameRGBA* toRBGA();
+        RenderFrameI420 toI420() const;
+        RenderFrameRgba toRgba() const;
     };
 
-
+    //i420Frame
     class RenderFrameI420{
     public:
-        static RenderFrameI420* Create(RenderFrameData* imageData)
+        static RenderFrameI420 Create(RenderFrameData data)
         {
-            return new RenderFrameI420(imageData);
+            auto expectedByteLength = static_cast<size_t>(data.width * data.height * 1.5);
+            auto actualByteLength = data.byteLength;
+            if (actualByteLength != expectedByteLength) { 
+                //Error
+            }
+            RenderFrameI420 i420Frame(data);
+            return i420Frame;
         }
 
         ~RenderFrameI420()
         {
-            if( data != nullptr ) {
-                delete data;
-                data = nullptr;
-            }
+
         }
 
         size_t sizeOfLuminancePlane() const {
@@ -51,7 +63,7 @@ namespace node_webrtc {
         }
 
         uint8_t* dataY() {
-            return data->bytes;
+            return data.bytes;
         }
 
         int strideY() const {
@@ -75,36 +87,40 @@ namespace node_webrtc {
         }
 
         int width() const {
-            return data->width;
+            return data.width;
         }
 
         int height() const {
-            return data->height;
+            return data.height;
         }
 
     private:
-        explicit RenderFrameI420(RenderFrameData* data): data(data) {}
-        RenderFrameData* data;
+        explicit RenderFrameI420(RenderFrameData data): data(data) {}
+        RenderFrameData data;
     };
 
-    class RenderFrameRGBA{
+    //rbgaFrame
+    class RenderFrameRgba{
     
     public:
-        ~RenderFrameRGBA()
+        static RenderFrameRgba Create(RenderFrameData data)
         {
-            if( data != nullptr ) {
-                delete data;
-                data = nullptr;
+            auto expectedByteLength = static_cast<size_t>(data.width * data.height * 4); 
+            auto actualByteLength = data.byteLength;
+            if (actualByteLength != expectedByteLength) {
+
             }
+            RenderFrameRgba rbgaFrame(data);
+            return rbgaFrame;
+        }
+        ~RenderFrameRgba()
+        {
+
         }
 
-        static RenderFrameRGBA* Create(RenderFrameData* imageData)
-        {
-            return new RenderFrameRGBA(imageData);
-        }
 
         uint8_t* dataRgba() {
-            return data->bytes;
+            return data.bytes;
         }
 
         int strideRgba() const {
@@ -112,15 +128,22 @@ namespace node_webrtc {
         }
 
         int width() const {
-            return data->width;
+            return data.width;
         }
 
         int height() const {
-            return data->height;
+            return data.height;
         }
 
     private:
-        explicit RenderFrameRGBA(RenderFrameData* data): data(data) {}
-        RenderFrameData* data;
+        explicit RenderFrameRgba(RenderFrameData data): data(data) {}
+        RenderFrameData data;
     };
+
+
+    // static bool RgbaToI420( RenderFrameRgba rbgaFrame, RenderFrameI420 i420Frame );
+    // static rtc::scoped_refptr<webrtc::I420Buffer> CreateI420Buffer(RenderFrameI420 i420Frame);
+
+    static rtc::scoped_refptr<webrtc::I420Buffer> CreateI420Buffer(int width, int height, uint8_t* piexls, size_t length);
+ 
 }

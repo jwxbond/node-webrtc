@@ -71,32 +71,8 @@ Napi::Value RTCRenderVideoSource::CreateTrack(const Napi::CallbackInfo&) {
 }
 
 Napi::Value RTCRenderVideoSource::OnFrame(const Napi::CallbackInfo& info) {
-  // CONVERT_ARGS_OR_THROW_AND_RETURN_NAPI(info, buffer, rtc::scoped_refptr<webrtc::I420Buffer>)
-  // webrtc::VideoFrame::Builder builder;
-  // auto frame = builder.set_video_frame_buffer(buffer).build();
-
-  //TODO frame I420Buffer format
-
-
-
-  //fetch I420Buffer
-  //   libyuv::ABGRToI420(
-  //     rgbaFrame.dataRgba(),
-  //     rgbaFrame.strideRgba(),
-  //     i420Frame.dataY(),
-  //     i420Frame.strideY(),
-  //     i420Frame.dataU(),
-  //     i420Frame.strideU(),
-  //     i420Frame.dataV(),
-  //     i420Frame.strideV(),
-  //     rgbaFrame.width(),
-  //     rgbaFrame.height()
-  // );
-
-  // webrtc::VideoFrame::Builder builder;
-  // webrtc::VideoFrame frame = builder.set_video_frame_buffer(buffer).build();
-
-  // _source->PushFrame(frame);
+  auto frame = _videoRender->GetCurrentFrameBuffer();
+  _source->PushFrame(frame);
   return info.Env().Undefined();
 }
 
