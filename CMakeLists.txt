@@ -398,6 +398,8 @@ else()
     target_link_libraries(${MODULE} PRIVATE
       "-framework AppKit"
       "-framework AVFoundation"
+      "-framework OpenGL"
+      "-framework GLUT"
     )
 
     target_compile_options(${MODULE} PRIVATE
