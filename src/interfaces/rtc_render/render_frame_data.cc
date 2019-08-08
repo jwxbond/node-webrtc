@@ -9,17 +9,6 @@
 namespace node_webrtc {
 
 
-RenderFrameI420 RenderFrameData::toI420() const
-{
-  return RenderFrameI420::Create(*this);
-
-}
-
-RenderFrameRgba RenderFrameData::toRgba() const
-{
-  return RenderFrameRgba::Create(*this);
-}
-
 
 static bool RgbaToI420( RenderFrameRgba rgbaFrame, RenderFrameI420 i420Frame )
 {
@@ -43,7 +32,7 @@ static bool RgbaToI420( RenderFrameRgba rgbaFrame, RenderFrameI420 i420Frame )
     return ret == 0;
 }
 
-static rtc::scoped_refptr<webrtc::I420Buffer> CreateI420Buffer(int width, int height, uint8_t* piexls, size_t length)
+rtc::scoped_refptr<webrtc::I420Buffer> RenderFrameData::CreateI420FrameWithRenderBuffer(int width, int height, uint8_t* piexls, size_t length)
 {
     
     RenderFrameData rgbaData = RenderFrameData::Create(width, height, piexls, length);
@@ -66,5 +55,15 @@ static rtc::scoped_refptr<webrtc::I420Buffer> CreateI420Buffer(int width, int he
     return buffer;
 }
 
+RenderFrameI420 RenderFrameData::toI420() const
+{
+  return RenderFrameI420::Create(*this);
+
+}
+
+RenderFrameRgba RenderFrameData::toRgba() const
+{
+  return RenderFrameRgba::Create(*this);
+}
 
 }

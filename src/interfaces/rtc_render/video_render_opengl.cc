@@ -60,7 +60,7 @@ int32_t VideoRenderOpenGL::StopRender()
 
 webrtc::VideoFrame VideoRenderOpenGL::GetCurrentFrameBuffer()
 {
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, mFBO);
     glBindTexture(GL_TEXTURE_2D, mTextureID);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -74,12 +74,13 @@ webrtc::VideoFrame VideoRenderOpenGL::GetCurrentFrameBuffer()
     GLenum error = glGetError();
     if ( error != 0 )
     {
-        printf("[VideoRenderOpenGL] GetCurrentFrameBuffer glReadPixels error=%d\n", error);
+        printf("[VideoRenderOpenGL] GetCurrentFrameBuffer glGetTexImage() error=%d\n", error);
     }
     
     glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    rtc::scoped_refptr<webrtc::I420Buffer> buffer = CreateI420Buffer(mWidth, mHeight, pixels, pixelLength);
+    rtc::scoped_refptr<webrtc::I420Buffer> buffer = RenderFrameData::CreateI420FrameWithRenderBuffer(mWidth, mHeight, pixels, pixelLength);
     webrtc::VideoFrame::Builder builder;
     auto frame = builder.set_video_frame_buffer(buffer).build();
 
@@ -132,7 +133,7 @@ void VideoRenderOpenGL::InitOpenGLEnvironment()
 
     //frame buffer 
 	glGenFramebuffers(1, &mFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, mFBO);
+	(GL_FRAMEBUFFER, mFBO);
 	printf("[VideoRenderOpenGL] glGenFramebuffers()=%d\n", mFBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, mTextureID, 0);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, mDepthBuffer);
@@ -153,9 +154,10 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
     printf("[VideoRenderOpenGL] ExecRenderTask..taskId=%d\n", taskId);
     if( !mOpenGLInited )
     {
-        printf("[VideoRenderOpenGL] mOpenGLInited = false");
+        printf("[VideoRenderOpenGL] mOpenGLInited = false\n");
         return;
     }
+
 
     //for test
     //2. do task with taskId
@@ -166,9 +168,11 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
     glBindFramebuffer(GL_FRAMEBUFFER, mFBO);
     glBindTexture(GL_TEXTURE_2D, mTextureID);
 
+
     switch (taskId)
     {
     case 0: //rectangle
+
         glBegin(GL_QUADS);
             glColor3f(1.0f, 0.0f, 0.0f);
             glVertex2f(-0.5f, -0.5f);    // x, y
@@ -176,6 +180,8 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
             glVertex2f( 0.5f,  0.5f);
             glVertex2f(-0.5f,  0.5f);
         glEnd();
+        printf("[VideoRenderOpenGL] draw rectangle, error=%d\n", glGetError());
+
         break;
     
     case 1: //triangle
@@ -192,6 +198,8 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
             glColor3f(0.0f, 0.0f, 1.0f); // Blue
             glVertex2f(0.6f, -0.9f);
         glEnd();
+        printf("[VideoRenderOpenGL] draw triangle, error=%d\n", glGetError());
+
         break;
 
     case 2: //polygon
@@ -204,6 +212,7 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
             glVertex2f(0.4f, 0.6f);
             glVertex2f(0.3f, 0.4f);
         glEnd();
+        printf("[VideoRenderOpenGL] draw polygon, error=%d\n", glGetError());
         break;
     case 3: //circle
     {
@@ -218,6 +227,7 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
                 glVertex2f(cos(angle) * ballRadius, sin(angle) * ballRadius);
             }
         glEnd();
+        printf("[VideoRenderOpenGL] draw circle, error=%d\n", glGetError());
         break;
     }
     case 4: //image
@@ -229,6 +239,7 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
     }
 
     glFlush();
+    printf("[VideoRenderOpenGL] glFlush(), error=%d\n", glGetError());
 }
 
 }
