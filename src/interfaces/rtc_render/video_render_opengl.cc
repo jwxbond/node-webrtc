@@ -145,6 +145,8 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
 
     //for test
     //2. do task with taskId
+    glClearColor(0.0, 0, 0, 0.4);
+    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     switch (taskId)
     {
@@ -207,6 +209,8 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
 
         break;
     }
+
+    glFlush();
 }
 
 }

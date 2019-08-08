@@ -78,7 +78,8 @@ Napi::Value RTCRenderVideoSource::OnFrame(const Napi::CallbackInfo& info) {
 
 //Exec Input Operation
 Napi::Value RTCRenderVideoSource::ExecOperation(const Napi::CallbackInfo& info) {
-
+  int taskId = 0;
+  _videoRender->ExecRenderTask();
   return info.Env().Undefined();
 }
 

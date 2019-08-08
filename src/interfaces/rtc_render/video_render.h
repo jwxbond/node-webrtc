@@ -19,6 +19,7 @@ public:
 	virtual int32_t StartRender() = 0;
 	virtual int32_t StopRender() = 0;
 	virtual webrtc::VideoFrame GetCurrentFrameBuffer() = 0;
+	virtual void ExecRenderTask(int taskId = 0) = 0;
 
 protected:
 	virtual ~VideoRenderModule();
