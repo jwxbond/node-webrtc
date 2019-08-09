@@ -111,7 +111,7 @@ namespace node_webrtc {
             auto expectedByteLength = static_cast<size_t>(data.width * data.height * 4); 
             auto actualByteLength = data.byteLength;
             if (actualByteLength != expectedByteLength) {
-
+                printf("RenderFrameRgba Length Error!!!!\n");
             }
             RenderFrameRgba rbgaFrame(data);
             return rbgaFrame;

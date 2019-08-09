@@ -7,6 +7,7 @@
 
 #define PI 3.14159265f
 
+#define R_GL_ERROR(index)  (printf("[VideoRenderOpenGL] call opengl  %d, error=%d\n", index,  glGetError()))
 
 namespace node_webrtc {
 
@@ -15,8 +16,8 @@ VideoRenderOpenGL::VideoRenderOpenGL(const char* renderId):
     mRenderId(renderId), 
     mOpenGLInited(false)
 {
-    mWidth = 500;
-    mHeight = 500;
+    mWidth = 100;
+    mHeight = 100;
 }
 
 VideoRenderOpenGL::VideoRenderOpenGL(const char* renderId, int width, int height):
@@ -57,19 +58,29 @@ int32_t VideoRenderOpenGL::StopRender()
     return -1;
 }
 
-
 webrtc::VideoFrame VideoRenderOpenGL::GetCurrentFrameBuffer()
 {
-    glBindFramebuffer(GL_FRAMEBUFFER, mFBO);
-    glBindTexture(GL_TEXTURE_2D, mTextureID);
+    glBindFramebuffer(GL_FRAMEBUFFER, mFBO); 
+    glBindTexture(GL_TEXTURE_2D, mTextureID); 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 
-    size_t pixelLength = static_cast<size_t>(mWidth * mHeight * 4);
+    size_t pixelLength = static_cast<size_t>(mWidth * mHeight * 4); 
     GLubyte *pixels = new GLubyte[pixelLength];
-    // glReadPixels(0, 0, mWidth, mHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+    glReadPixels(0, 0, mWidth, mHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    // glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+
+
+    // FILE *file = fopen("/Users/jiangweixing/Documents/gitlab/kraken-server/test.png", "w");
+    // if( file != nullptr )
+    // {
+    //     fwrite(pixels, pixelLength, 1, file);
+    //     fclose(file);
+    // }
+
+    // ``````
+    
 
     GLenum error = glGetError();
     if ( error != 0 )
@@ -82,10 +93,12 @@ webrtc::VideoFrame VideoRenderOpenGL::GetCurrentFrameBuffer()
 
     rtc::scoped_refptr<webrtc::I420Buffer> buffer = RenderFrameData::CreateI420FrameWithRenderBuffer(mWidth, mHeight, pixels, pixelLength);
     webrtc::VideoFrame::Builder builder;
-    auto frame = builder.set_video_frame_buffer(buffer).build();
+    webrtc::VideoFrame frame = builder.set_video_frame_buffer(buffer).build();
 
     if( pixels ) delete pixels;
     
+    // printf("[VideoRenderOpenGL] VideoFrame width=%d,height=%d,size=%d\n", frame.width(), frame.height(), frame.size());
+
     return frame;
 }
 
@@ -106,39 +119,39 @@ void VideoRenderOpenGL::InitOpenGLEnvironment()
     int argc = 0;
     glutInit(&argc, NULL);
     glutInitDisplayMode(GLUT_3_2_CORE_PROFILE | GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH );
-    glutInitWindowSize( 500, 500 );
+    glutInitWindowSize( mWidth, mHeight );
     glutCreateWindow( "Rotating Color Square" );
 
-    glViewport(0, 0, mWidth, mHeight);
+    glViewport(0, 0, mWidth, mHeight);R_GL_ERROR(-5);
     printf("[VideoRenderOpenGL] glViewport(0,0,%d, %d)\n", mWidth, mHeight);
 
     //texture
-    glGenTextures(1, &mTextureID);
+    glGenTextures(1, &mTextureID);R_GL_ERROR(-4);
     printf("[VideoRenderOpenGL] glGenTextures=%d\n", mTextureID);
-    glBindTexture(GL_TEXTURE_2D, mTextureID);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glBindTexture(GL_TEXTURE_2D, mTextureID);R_GL_ERROR(-3);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);R_GL_ERROR(-2);
 	printf("[VideoRenderOpenGL] glTexImage2D()\n");
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);R_GL_ERROR(-1);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);R_GL_ERROR(0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);R_GL_ERROR(1);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);R_GL_ERROR(2);
 
     //depthBuffer
-    glGenRenderbuffers(1, &mDepthBuffer);
-    glBindRenderbuffer(GL_RENDERBUFFER, mDepthBuffer);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, mWidth, mHeight);
+    glGenRenderbuffers(1, &mDepthBuffer);R_GL_ERROR(3);
+    glBindRenderbuffer(GL_RENDERBUFFER, mDepthBuffer);R_GL_ERROR(4);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, mWidth, mHeight);R_GL_ERROR(5);
     printf("[VideoRenderOpenGL] depthBuffer, glGenRenderbuffers()=%d\n", mDepthBuffer);
 
 
     //frame buffer 
-	glGenFramebuffers(1, &mFBO);
-	(GL_FRAMEBUFFER, mFBO);
+	glGenFramebuffers(1, &mFBO);R_GL_ERROR(6);
+	glBindFramebuffer(GL_FRAMEBUFFER, mFBO);R_GL_ERROR(61);
 	printf("[VideoRenderOpenGL] glGenFramebuffers()=%d\n", mFBO);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, mTextureID, 0);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, mDepthBuffer);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, mTextureID, 0);R_GL_ERROR(7);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, mDepthBuffer);R_GL_ERROR(8);
     
-    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);R_GL_ERROR(9);
     if( status != GL_FRAMEBUFFER_COMPLETE )
     {
 	    printf("[VideoRenderOpenGL] Error glCheckFramebufferStatus()=%d\n", status);
@@ -161,8 +174,8 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
 
     //for test
     //2. do task with taskId
-    glClearColor(0.0, 0, 0, 0.4);
-    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);   R_GL_ERROR(10);
+    glClear(GL_COLOR_BUFFER_BIT);   R_GL_ERROR(11);
 
 
     glBindFramebuffer(GL_FRAMEBUFFER, mFBO);
@@ -173,14 +186,22 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
     {
     case 0: //rectangle
 
-        glBegin(GL_QUADS);
+        printf("[VideoRenderOpenGL] draw rectangle, error0=%d\n", glGetError());
+
+        glBegin(GL_QUADS); 
+        printf("[VideoRenderOpenGL] draw rectangle, error1=%d\n", glGetError());
             glColor3f(1.0f, 0.0f, 0.0f);
+        printf("[VideoRenderOpenGL] draw rectangle, error2=%d\n", glGetError());
             glVertex2f(-0.5f, -0.5f);    // x, y
+        printf("[VideoRenderOpenGL] draw rectangle, error3=%d\n", glGetError());
             glVertex2f( 0.5f, -0.5f);
+        printf("[VideoRenderOpenGL] draw rectangle, error4=%d\n", glGetError());
             glVertex2f( 0.5f,  0.5f);
+        printf("[VideoRenderOpenGL] draw rectangle, error5=%d\n", glGetError());
             glVertex2f(-0.5f,  0.5f);
+        printf("[VideoRenderOpenGL] draw rectangle, error6=%d\n", glGetError());
         glEnd();
-        printf("[VideoRenderOpenGL] draw rectangle, error=%d\n", glGetError());
+        printf("[VideoRenderOpenGL] draw rectangle, error7=%d\n", glGetError());
 
         break;
     
