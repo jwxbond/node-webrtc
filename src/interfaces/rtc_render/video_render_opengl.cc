@@ -161,8 +161,8 @@ void VideoRenderOpenGL::InitOpenGLEnvironment()
     
     printf("[VideoRenderOpenGL] InitOpenGLEnvironment Finished..\n");
 
-    glMatrixMode(GL_MODELVIEW); R_GL_ERROR("glMatrixMode");
-    glLoadIdentity();  R_GL_ERROR("glLoadIdentity");
+    // glMatrixMode(GL_MODELVIEW); R_GL_ERROR("glMatrixMode");
+    // glLoadIdentity();  R_GL_ERROR("glLoadIdentity");
 }
 
 void VideoRenderOpenGL::ExecRenderTask(int taskId)
