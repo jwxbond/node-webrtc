@@ -41,6 +41,7 @@ protected:
 	const char* mRenderId;
 
 	//for test
+	int mCurrentTaskId;
 	bool InitOpenGLEnvironment();
 	void DestroyOpenGLEnvironment();
 	bool mOpenGLInited;

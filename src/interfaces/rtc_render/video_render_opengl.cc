@@ -8,7 +8,7 @@
 
 #define PI 3.14159265f
 
-#define R_GL_ERROR(func)  (printf("[VideoRenderOpenGL][%s],error=%d\n", func, glGetError()))
+#define R_GL_ERROR(func)  /*(printf("[VideoRenderOpenGL][%s],error=%d\n", func, glGetError()))*/
 
 namespace node_webrtc {
 
@@ -48,7 +48,7 @@ int32_t VideoRenderOpenGL::StartRender()
     bool ret = InitOpenGLEnvironment();
     if( ret )
     {
-        ExecRenderTask(2);
+        ExecRenderTask(0);
         return 0;
     }
     return -1;
@@ -61,8 +61,19 @@ int32_t VideoRenderOpenGL::StopRender()
     return 0;
 }
 
+
+
+//for test index
+static int staticTimeCount = 0;
 webrtc::VideoFrame VideoRenderOpenGL::GetCurrentFrameBuffer()
 {
+    staticTimeCount++;
+    if( staticTimeCount % 60 == 0  ){
+        mCurrentTaskId++;
+        int taskId = mCurrentTaskId % 4;
+        ExecRenderTask(taskId);
+    }
+
     glBindFramebuffer(GL_FRAMEBUFFER, mFBO); 
     glBindTexture(GL_TEXTURE_2D, mTextureID); 
 
@@ -186,6 +197,8 @@ void VideoRenderOpenGL::DestroyOpenGLEnvironment()
 
 void VideoRenderOpenGL::ExecRenderTask(int taskId)
 {
+    mCurrentTaskId = taskId;
+
     printf("[VideoRenderOpenGL] ExecRenderTask..taskId=%d\n", taskId);
     if( !mOpenGLInited )
     {
@@ -193,20 +206,21 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
         return;
     }
 
-
+    glBindFramebuffer(GL_FRAMEBUFFER, mFBO); R_GL_ERROR("glBindFramebuffer");
+    glBindTexture(GL_TEXTURE_2D, mTextureID); R_GL_ERROR("glBindTexture");
+    
     //for test
     //2. do task with taskId
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f); R_GL_ERROR("glClearColor");
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT); R_GL_ERROR("glClear");
 
-    glBindFramebuffer(GL_FRAMEBUFFER, mFBO); R_GL_ERROR("glBindFramebuffer");
-    glBindTexture(GL_TEXTURE_2D, mTextureID); R_GL_ERROR("glBindTexture");
+
 
 
     switch (taskId)
     {
     case 0: //quads
-    glBegin(GL_QUADS); R_GL_ERROR("draw QUADS glBegin(GL_QUADS) ");
+        glBegin(GL_QUADS); R_GL_ERROR("draw QUADS glBegin(GL_QUADS) ");
             glColor3f(1.0f, 0.0f, 0.0f); R_GL_ERROR("draw rectangle glColor3f() ");
             glVertex2f(-0.5f, -0.5f); R_GL_ERROR("draw rectangle glVertex2f(-0.5f, -0.5f) ");
             glVertex2f( 0.5f, -0.5f); R_GL_ERROR("draw rectangle glVertex2f(0.5f, -0.5f) ");
@@ -268,7 +282,7 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
         break;
     }
 
-    // glFlush();
+    glFlush();
     printf("[VideoRenderOpenGL] glFlush(), error=%d\n", glGetError());
 }
 
