@@ -4,6 +4,7 @@
 #include <Math.h> 
 #include "src/interfaces/rtc_render/video_render_opengl.h"
 #include "src/interfaces/rtc_render/render_frame_data.h"
+#include "src/interfaces/rtc_render/video_render_gl_context.h"
 
 #define PI 3.14159265f
 
@@ -32,7 +33,7 @@ VideoRenderOpenGL::VideoRenderOpenGL(const char* renderId, int width, int height
 
 VideoRenderOpenGL::~VideoRenderOpenGL()
 {
-
+    DestroyOpenGLEnvironment();
 }
 
 const char* VideoRenderOpenGL::CurrentRenderId()
@@ -44,9 +45,12 @@ const char* VideoRenderOpenGL::CurrentRenderId()
 int32_t VideoRenderOpenGL::StartRender()
 {
     printf("[VideoRenderOpenGL] StartRender..\n");
-    //TODO启动线程OpenGL渲染
-    InitOpenGLEnvironment();
-    ExecRenderTask(0);
+    bool ret = InitOpenGLEnvironment();
+    if( ret )
+    {
+        ExecRenderTask(2);
+        return 0;
+    }
     return -1;
 }
 
@@ -54,33 +58,17 @@ int32_t VideoRenderOpenGL::StartRender()
 int32_t VideoRenderOpenGL::StopRender()
 {
     printf("[VideoRenderOpenGL] StopRender..\n");
-    //TODO停止线程OpenGL渲染
-    return -1;
+    return 0;
 }
 
 webrtc::VideoFrame VideoRenderOpenGL::GetCurrentFrameBuffer()
 {
     glBindFramebuffer(GL_FRAMEBUFFER, mFBO); 
     glBindTexture(GL_TEXTURE_2D, mTextureID); 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
 
     size_t pixelLength = static_cast<size_t>(mWidth * mHeight * 4); 
     GLubyte *pixels = new GLubyte[pixelLength];
-    glReadPixels(0, 0, mWidth, mHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-    // glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-
-
-    // FILE *file = fopen("/Users/jiangweixing/Documents/gitlab/kraken-server/test.png", "w");
-    // if( file != nullptr )
-    // {
-    //     fwrite(pixels, pixelLength, 1, file);
-    //     fclose(file);
-    // }
-
-    // ``````
-    
+    glReadPixels(0, 0, mWidth, mHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels);    
 
     GLenum error = glGetError();
     if ( error != 0 )
@@ -95,16 +83,18 @@ webrtc::VideoFrame VideoRenderOpenGL::GetCurrentFrameBuffer()
     webrtc::VideoFrame::Builder builder;
     webrtc::VideoFrame frame = builder.set_video_frame_buffer(buffer).build();
 
-    if( pixels ) delete pixels;
-    
-    // printf("[VideoRenderOpenGL] VideoFrame width=%d,height=%d,size=%d\n", frame.width(), frame.height(), frame.size());
+    if( nullptr != pixels )
+    {
+        delete pixels;
+        pixels = nullptr;
+    }
 
     return frame;
 }
 
 
 //for test
-void VideoRenderOpenGL::InitOpenGLEnvironment()
+bool VideoRenderOpenGL::InitOpenGLEnvironment()
 {
     printf("[VideoRenderOpenGL] InitOpenGLEnvironment Start..\n");
 
@@ -114,13 +104,22 @@ void VideoRenderOpenGL::InitOpenGLEnvironment()
     }
 
     printf("[VideoRenderOpenGL] Init GL context ..\n");
+    RenderGLContext::Init();
 
-    //Only for Mac OSX
-    int argc = 0;
-    glutInit(&argc, NULL);
-    glutInitDisplayMode(GLUT_3_2_CORE_PROFILE | GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH );
-    glutInitWindowSize( mWidth, mHeight );
-    glutCreateWindow( "Rotating Color Square" );
+    glEnable(GL_MULTISAMPLE);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glHint(GL_POINT_SMOOTH,GL_NICEST);
+    glEnable(GL_POINT_SMOOTH);
+
+    glHint(GL_LINE_SMOOTH,GL_NICEST);
+    glEnable(GL_LINE_SMOOTH);
+
+    glHint(GL_POLYGON_SMOOTH,GL_NICEST);
+    glEnable(GL_POLYGON_SMOOTH);
+
 
     glViewport(0, 0, mWidth, mHeight);
     printf("[VideoRenderOpenGL] glViewport(0,0,%d, %d)\n", mWidth, mHeight); R_GL_ERROR("glViewport");
@@ -131,6 +130,9 @@ void VideoRenderOpenGL::InitOpenGLEnvironment()
     printf("[VideoRenderOpenGL] glGenTextures=%d\n", mTextureID); R_GL_ERROR("glGenTextures");
     glBindTexture(GL_TEXTURE_2D, mTextureID); R_GL_ERROR("glBindTexture");
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+    // glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, mTextureID);
+
     printf("[VideoRenderOpenGL] glTexImage2D()\n"); R_GL_ERROR("glTexImage2D");
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);R_GL_ERROR("glTexParameteri");
@@ -144,7 +146,6 @@ void VideoRenderOpenGL::InitOpenGLEnvironment()
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, mWidth, mHeight);
     printf("[VideoRenderOpenGL] depthBuffer, glGenRenderbuffers()=%d\n", mDepthBuffer); R_GL_ERROR("glRenderbufferStorage");
 
-
     //frame buffer 
 	glGenFramebuffers(1, &mFBO); R_GL_ERROR("glGenFramebuffers");
 	glBindFramebuffer(GL_FRAMEBUFFER, mFBO);
@@ -156,13 +157,31 @@ void VideoRenderOpenGL::InitOpenGLEnvironment()
     if( status != GL_FRAMEBUFFER_COMPLETE )
     {
 	    printf("[VideoRenderOpenGL] Error glCheckFramebufferStatus()=%d\n", status);
-        return;
+        return false;
     }
     
     printf("[VideoRenderOpenGL] InitOpenGLEnvironment Finished..\n");
+    return true;
+}
 
-    // glMatrixMode(GL_MODELVIEW); R_GL_ERROR("glMatrixMode");
-    // glLoadIdentity();  R_GL_ERROR("glLoadIdentity");
+void VideoRenderOpenGL::DestroyOpenGLEnvironment()
+{
+    if( mTextureID > 0 )
+    {
+        glDeleteTextures(1, &mTextureID);
+    }
+
+    if( mDepthBuffer )
+    {
+        glDeleteFramebuffers(1, &mDepthBuffer); 
+    }
+
+    if( mFBO > 0 )
+    {
+        glDeleteFramebuffers(1, &mFBO);
+    }
+    
+    RenderGLContext::Destroy();
 }
 
 void VideoRenderOpenGL::ExecRenderTask(int taskId)
@@ -177,9 +196,8 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
 
     //for test
     //2. do task with taskId
-    glClearColor(1.0f, 0.0f, 0.0f, 1.0f); R_GL_ERROR("glClearColor");
-    glClear(GL_COLOR_BUFFER_BIT); R_GL_ERROR("glClear");
-
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f); R_GL_ERROR("glClearColor");
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT); R_GL_ERROR("glClear");
 
     glBindFramebuffer(GL_FRAMEBUFFER, mFBO); R_GL_ERROR("glBindFramebuffer");
     glBindTexture(GL_TEXTURE_2D, mTextureID); R_GL_ERROR("glBindTexture");
@@ -187,8 +205,8 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
 
     switch (taskId)
     {
-    case 0: //rectangle
-        glBegin(GL_QUADS); R_GL_ERROR("draw rectangle glBegin(GL_QUADS) ");
+    case 0: //quads
+    glBegin(GL_QUADS); R_GL_ERROR("draw QUADS glBegin(GL_QUADS) ");
             glColor3f(1.0f, 0.0f, 0.0f); R_GL_ERROR("draw rectangle glColor3f() ");
             glVertex2f(-0.5f, -0.5f); R_GL_ERROR("draw rectangle glVertex2f(-0.5f, -0.5f) ");
             glVertex2f( 0.5f, -0.5f); R_GL_ERROR("draw rectangle glVertex2f(0.5f, -0.5f) ");
@@ -197,19 +215,19 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
         glEnd();  R_GL_ERROR("draw rectangle glEnd() ");
         break;
     case 1: //triangle
-        glBegin(GL_TRIANGLES);// Each set of 3 vertices form a triangle
-            glColor3f(0.0f, 0.0f, 1.0f); // Blue
-            glVertex2f(0.1f, -0.6f);
-            glVertex2f(0.7f, -0.6f);
-            glVertex2f(0.4f, -0.1f);
+        glBegin(GL_TRIANGLES);           R_GL_ERROR("draw TRIANGLES glBegin(GL_TRIANGLES) ");
+            glColor3f(0.0f, 0.0f, 1.0f); R_GL_ERROR("draw triangle glColor3f() "); // Blue
+            glVertex2f(0.1f, -0.6f);     R_GL_ERROR("draw triangle glVertex2f(0.1f, -0.6f)");
+            glVertex2f(0.7f, -0.6f);     R_GL_ERROR("draw triangle glVertex2f(0.7f, -0.6f)");
+            glVertex2f(0.4f, -0.1f);     R_GL_ERROR("draw triangle glVertex2f(0.4f, -0.1f)");
         
-            glColor3f(1.0f, 0.0f, 0.0f); // Red
-            glVertex2f(0.3f, -0.4f);
-            glColor3f(0.0f, 1.0f, 0.0f); // Green
-            glVertex2f(0.9f, -0.4f);
-            glColor3f(0.0f, 0.0f, 1.0f); // Blue
-            glVertex2f(0.6f, -0.9f);
-        glEnd();
+            glColor3f(1.0f, 0.0f, 0.0f); R_GL_ERROR("draw triangle glColor3f(1.0f, 0.0f, 0.0f)");// Red
+            glVertex2f(0.3f, -0.4f);     R_GL_ERROR("draw triangle glVertex2f(0.3f, -0.4f)");
+            glColor3f(0.0f, 1.0f, 0.0f); R_GL_ERROR("draw triangle glColor3f(0.0f, 1.0f, 0.0f)");// Green
+            glVertex2f(0.9f, -0.4f);     R_GL_ERROR("draw triangle glVertex2f(0.9f, -0.4f)");
+            glColor3f(0.0f, 0.0f, 1.0f); R_GL_ERROR("draw triangle glColor3f(0.0f, 0.0f, 1.0f)");// Blue
+            glVertex2f(0.6f, -0.9f);     R_GL_ERROR("draw triangle glVertex2f(0.6f, -0.9f)");
+        glEnd();                         R_GL_ERROR("draw triangle glEnd()");
         printf("[VideoRenderOpenGL] draw triangle, error=%d\n", glGetError());
 
         break;
@@ -250,7 +268,7 @@ void VideoRenderOpenGL::ExecRenderTask(int taskId)
         break;
     }
 
-    glFlush();
+    // glFlush();
     printf("[VideoRenderOpenGL] glFlush(), error=%d\n", glGetError());
 }
 

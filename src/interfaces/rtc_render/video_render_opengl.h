@@ -19,6 +19,7 @@
 
 #include "src/interfaces/rtc_render/video_render.h"
 
+
 namespace node_webrtc {
 
 class VideoRenderOpenGL : public VideoRenderModule
@@ -40,7 +41,8 @@ protected:
 	const char* mRenderId;
 
 	//for test
-	void InitOpenGLEnvironment();
+	bool InitOpenGLEnvironment();
+	void DestroyOpenGLEnvironment();
 	bool mOpenGLInited;
 	int mWidth;
 	int mHeight;
